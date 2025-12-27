@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-Based Fake News Detection System using Machine Learning & NLP">
+    <title>AI Fake News Detection System</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        /* Smooth transitions for theme switching */
+        * {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Loading spinner animation */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Fade in animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        /* Pulse animation for result badge */
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Toast notification styles */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        /* Circular meter styles */
+        .circular-meter {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+        }
+        
+        .circular-meter svg {
+            transform: rotate(-90deg);
+        }
+        
+        .circular-meter .bg-circle {
+            fill: none;
+            stroke: #e5e7eb;
+            stroke-width: 12;
+        }
+        
+        .circular-meter .progress-circle {
+            fill: none;
+            stroke-width: 12;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease-out;
+        }
+        
+        .circular-meter .progress-circle.fake {
+            stroke: url(#fakeGradient);
+        }
+        
+        .circular-meter .progress-circle.real {
+            stroke: url(#realGradient);
+        }
+        
+        .circular-meter-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .indicator-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid #ef4444;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .indicator-item.real {
+            background: rgba(34, 197, 94, 0.1);
+            border-left-color: #22c55e;
+        }
+        
+        .indicator-icon {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
+    
+    <!-- Theme Toggle Button -->
+    <button id="themeToggle" class="fixed top-4 right-4 z-50 p-3 rounded-full bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110">
+        <svg id="sunIcon" class="w-6 h-6 text-yellow-500 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+        </svg>
+        <svg id="moonIcon" class="w-6 h-6 text-gray-700 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+        </svg>
+    </button>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <div class="bg-red-500 text-white px-6 py-4 rounded-lg shadow-xl flex items-center gap-3">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+            </svg>
+            <span id="toastMessage">Error message</span>
+        </div>
+    </div>
+    
+    <!-- Main Container -->
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        
+        <!-- Header Section -->
+        <header class="text-center mb-12 fade-in">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4 gradient-text dark:text-white">
+                AI Fake News Detection System
+            </h1>
+            <p class="text-lg md:text-xl text-gray-600 dark:text-gray-300">
+                Detect misinformation using Machine Learning & NLP
+            </p>
+        </header>
+        
+        <!-- Main Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8 mb-8 fade-in">
+            
+            <!-- Input Section -->
+            <div class="mb-6">
+                <label for="newsInput" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    Enter News Article Text
+                </label>
+                <textarea 
+                    id="newsInput" 
+                    rows="8" 
+                    placeholder="Paste or type the news article text here to analyze..."
+                    class="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 resize-none transition-all duration-300"
+                ></textarea>
+                
+                <!-- Character Counter -->
+                <div class="flex justify-between items-center mt-2">
+                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                        <span id="charCount">0</span> / 5000 characters
+                    </span>
+                    <button 
+                        id="clearBtn"
+                        class="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors"
+                    >
+                        Clear
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Detect Button -->
+            <button 
+                id="detectBtn"
+                disabled
+                class="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3"
+            >
+                <span id="btnText">Detect Fake News</span>
+                <svg id="loadingSpinner" class="w-5 h-5 spinner hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Result Section (Hidden by default) -->
+        <div id="resultSection" class="hidden fade-in">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8">
+                
+                <!-- Prediction Badge -->
+                <div class="text-center mb-8">
+                    <div id="predictionBadge" class="inline-block px-8 py-4 rounded-2xl shadow-lg pulse-animation">
+                        <span id="predictionText" class="text-2xl md:text-3xl font-bold text-white">FAKE</span>
+                    </div>
+                </div>
+                
+                <!-- Circular Meter -->
+                <div class="mb-8">
+                    <div class="circular-meter">
+                        <svg width="200" height="200">
+                            <defs>
+                                <linearGradient id="fakeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#ec4899;stop-opacity:1" />
+                                </linearGradient>
+                                <linearGradient id="realGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#22c55e;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <circle class="bg-circle dark:stroke-gray-700" cx="100" cy="100" r="85"></circle>
+                            <circle id="progressCircle" class="progress-circle" cx="100" cy="100" r="85" 
+                                    stroke-dasharray="534.07" stroke-dashoffset="534.07"></circle>
+                        </svg>
+                        <div class="circular-meter-text">
+                            <div id="circularConfidence" class="text-4xl font-bold text-gray-900 dark:text-white">0%</div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Confidence</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Confidence Score Progress Bar -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            Confidence Score
+                        </span>
+                        <span id="confidenceText" class="text-lg font-bold text-gray-900 dark:text-white">
+                            92%
+                        </span>
+                    </div>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                        <div id="confidenceBar" class="h-full rounded-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <!-- Detected Indicators -->
+                <div id="indicatorsSection" class="mb-6 hidden">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                        Detected Indicators
+                    </h3>
+                    <div id="indicatorsList" class="space-y-2">
+                        <!-- Indicators will be dynamically inserted here -->
+                    </div>
+                </div>
+                
+                <!-- Explanation -->
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-5">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+                        Analysis Explanation
+                    </h3>
+                    <p id="explanationText" class="text-gray-700 dark:text-gray-300 leading-relaxed">
+                        This news shows patterns commonly found in fake articles.
+                    </p>
+                </div>
+                
+                <!-- Analyze Another Button -->
+                <button 
+                    id="analyzeAnotherBtn"
+                    class="w-full mt-6 py-3 px-6 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-300"
+                >
+                    Analyze Another Article
+                </button>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Footer -->
+    <footer class="mt-16 py-6 text-center text-gray-600 dark:text-gray-400">
+        <p class="text-sm md:text-base">
+            Final Year Project | AI & Machine Learning
+        </p>
+    </footer>
+    
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
+
