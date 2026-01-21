@@ -2,6 +2,10 @@
 Machine Learning Model for Fake News Detection
 Uses TF-IDF Vectorization + Logistic Regression
 """
+import nltk
+import os
+
+nltk.data.path.append(os.environ.get("NLTK_DATA", "/opt/nltk_data"))
 
 import re
 import pickle
@@ -11,20 +15,21 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report
 import nltk
+import os
+
+# Set NLTK data path to a writable directory
+nltk_data_dir = os.path.join(os.path.expanduser('~'), 'nltk_data')
+os.makedirs(nltk_data_dir, exist_ok=True)
+nltk.data.path.append(nltk_data_dir)
+
+# Download required NLTK data
+nltk.download('punkt', quiet=True, download_dir=nltk_data_dir)
+nltk.download('stopwords', quiet=True, download_dir=nltk_data_dir)
+nltk.download('averaged_perceptron_tagger', quiet=True, download_dir=nltk_data_dir)
+
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import PorterStemmer
-
-# Download NLTK data (run once)
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt', quiet=True)
-
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords', quiet=True)
 
 class FakeNewsMLModel:
     """Machine Learning Model for Fake News Detection"""
